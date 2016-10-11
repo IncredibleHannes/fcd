@@ -93,4 +93,22 @@ class MarkdownDocumentParserTests extends FunSpec with Matchers with CustomMatch
       List(Heading(2,"s\n"), Paragraph("p\n"))
     )
   }
+  describe ("An indeted Code block cannot interrupt a paragraph") {
+    mdIndentedParagraph shouldParseWith(
+      "f\n    b\n\u0000",
+      List(Paragraph("f\nb\n"))
+    )
+  }
+  describe ("ThematicBreak can interrupt a paragraph") {
+    mdThemaicParagraph shouldParseWith(
+      "f\n***\nb\n\u0000",
+      List(Paragraph("f\n"), ThematicBreak(), Paragraph("b\n"))
+    )
+  }
+  describe ("Setext take precedence for thematic break") {
+    mdThematicSetext shouldParseWith(
+      "f\n---\n\u0000",
+      List(Heading(2,"f\n"))
+    )
+  }
 }

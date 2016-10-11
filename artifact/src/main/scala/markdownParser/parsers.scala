@@ -32,25 +32,28 @@ trait MarkdownParsers { self: RichParsers with MarkdownHelperfunctions =>
   // ########################### ATX Heading  ##################################
   // ###########################################################################
 
-  lazy val atxHeading : Parser[Block] =
-    openingSeq ~ atxHeadingContent <~ closingSeq ^^ {
-      case (a, b) => new Heading(a.length, b)
-    }
+  lazy val atxHeading : Parser[Block] = {
 
-  lazy val openingSeq: Parser[String] =
-    many(space) ~> repeat('#', 1, 6) <~ some(space)
+    lazy val openingSeq: Parser[String] =
+      indet ~> repeat('#', 1, 6) <~ some(space)
 
-  lazy val closingSeq =
-    ( (some(space) ~ many('#') ~ many(space) ~> newline)
-    | (many(space) ~ many('#') ~ some(space) ~> newline)
-    | newline
-    )
+    lazy val closingSeq =
+      ( (some(space) ~ many('#') ~ many(space) ~> newline)
+      | (many(space) ~ many('#') ~ some(space) ~> newline)
+      | newline
+      )
 
-  lazy val atxHeadingContent: Parser[String] =
-    ( not(some(space) ~ many(any))
-    &> (many(no('#') & no('\n')) &> inlineParser)
-    <& not(many(any) ~ some(space))
-    )
+    lazy val atxHeadingContent: Parser[String] =
+      ( not(some(space) ~ always)
+      &> (many(no('#') & no('\n')) &> inlineParser)
+      <& not(always ~ some(space))
+      )
+
+      openingSeq ~ atxHeadingContent <~ closingSeq ^^ {
+        case (a, b) => new Heading(a.length, b)
+      }
+  }
+
 
   // ###########################################################################
   // ############################ Code Block  #############ää###################
@@ -114,12 +117,10 @@ trait MarkdownParsers { self: RichParsers with MarkdownHelperfunctions =>
       | done(p)
       )
 
-    def thematicBreakLine(c: Char): Parser[Any] =
-      many(space) ~> (stripSpaces(min(c, 3)) <& not(space ~ always)) <~ newline
-
-    ( thematicBreakLine('*')
-    | thematicBreakLine('-')
-    | thematicBreakLine('_')
+    not(min(' ', 4) ~ always) &>
+    ( stripSpaces(min('*', 3)) <~ newline
+    | stripSpaces(min('-', 3)) <~ newline
+    | stripSpaces(min('_', 3)) <~ newline
     ) ^^ { a =>  ThematicBreak()}
   }
 
@@ -183,7 +184,7 @@ trait MarkdownParsers { self: RichParsers with MarkdownHelperfunctions =>
     done(open) ^^ {a => List(a)} |
     line >> {l =>
       val open2 = open <<< l
-      altBiasedAlt(((altBreaking(open) <<< l) ~ md ^^ {case (a, b) => a ++ b}),
+      biasedAlt2(((altBreaking(open) <<< l) ~ md ^^ {case (a, b) => a ++ b}),
       (open2 ~ (not(open2) &> md) ^^ {case (a, b) => a :: b}))    <|
       (md <<< l)
     }
@@ -213,27 +214,28 @@ trait MarkdownParsers { self: RichParsers with MarkdownHelperfunctions =>
 
   def altBreaking (p: Parser[Block]): Parser[List[Block]] =
     p >> {
-      case a: Paragraph => (p <<< a.toStr) ~
-        (emptyLine <| (atxHeading | blockQuote)) ^^ {
+      case a: Paragraph =>  (p <<< a.toStr) ~
+         (emptyLine <| (atxHeading | blockQuote | thematicBreak)) ^^ {
           case (a, b) => List(a, b)
         }
-      case a => fail
+      case _ => fail
     }
 
   def altReadLine (open: Parser[Block], doc: Parser[List[Block]]): Parser[List[Block]] =
     done(open) ^^ {a => List(a)} |
-    line >> {l =>
-      biasedAlt2(((altBreaking(open) <<< l) ~ doc ^^ {
+    line >> { l =>
+      val open2 = open <<< l
+      biasedAlt2((altBreaking(open) <<< l) ~ doc ^^ {
         case (a, b) => a ++ b
-      }) ,
-      ((open <<< l) ~ (not(open <<< l) &> doc) ^^ {
+      },
+      ((open2) ~ (not(open2) &> doc) ^^ {
         case (a, b) => a :: b
-      })) <|
+      }))<|
       (doc <<< l)
     }
 
   lazy val mdAtxParagraph: NT[List[Block]] =
-    biasedAlt2(altReadLine(atxHeading, mdAtxParagraph),
+    altBiasedAlt(altReadLine(atxHeading, mdAtxParagraph),
                  altReadLine(paragraph, mdAtxParagraph)) |
                  eos ^^^ (List())
 
@@ -251,6 +253,11 @@ trait MarkdownParsers { self: RichParsers with MarkdownHelperfunctions =>
     altBiasedAlt(altReadLine(setextHeading, mdSetextParagraph),
                  altReadLine(paragraph, mdSetextParagraph)) |
                  eos ^^^ (List())
+  lazy val mdThemaicParagraph: NT[List[Block]] =
+    altBiasedAlt(altReadLine(thematicBreak, mdThemaicParagraph),
+                 altReadLine(paragraph, mdThemaicParagraph)) |
+                 eos ^^^ (List())
+
 
   lazy val mdIndentedAtx: NT[List[Block]] =
     altBiasedAlt(altReadLine(indentedCodeBlock, mdIndentedAtx),
@@ -270,6 +277,16 @@ trait MarkdownParsers { self: RichParsers with MarkdownHelperfunctions =>
   lazy val mdIndentedSetext: NT[List[Block]] =
     altBiasedAlt(altReadLine(indentedCodeBlock, mdIndentedSetext),
                  altReadLine(setextHeading, mdIndentedSetext)) |
+                 eos ^^^ (List())
+
+  lazy val mdThematicSetext: NT[List[Block]] =
+    altBiasedAlt(altReadLine(thematicBreak, mdThematicSetext),
+                altReadLine(setextHeading, mdThematicSetext)) |
+                eos ^^^ (List())
+
+  lazy val mdIndentedParagraph: NT[List[Block]] =
+    altBiasedAlt(altReadLine(indentedCodeBlock, mdIndentedParagraph),
+                 altReadLine(paragraph, mdIndentedParagraph)) |
                  eos ^^^ (List())
 }
 

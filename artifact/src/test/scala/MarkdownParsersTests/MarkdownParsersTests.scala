@@ -24,6 +24,7 @@ class MarkdownParserTests extends FunSpec with Matchers with CustomMatchers {
   // ###########################################################################
   // ######################## ATX Heading Tetsts ###############################
   // ###########################################################################
+  // Complete tested!
   def H1(content: String) =
     Heading(1, content)
   def H2(content: String) =
@@ -36,7 +37,9 @@ class MarkdownParserTests extends FunSpec with Matchers with CustomMatchers {
     Heading(5, content)
   def H6(content: String) =
     Heading(6, content)
-
+  describe ("ATX Heading should not parse the empty string"){
+    atxHeading shouldNotParse("")
+  }
   describe ("Simple headings:") {
     atxHeading shouldParseWith (
       "# foo\n",
@@ -156,6 +159,10 @@ class MarkdownParserTests extends FunSpec with Matchers with CustomMatchers {
   // ###########################################################################
   // #################### Indented Code Block Tests ############################
   // ###########################################################################
+  // Complete tested!
+  describe ("Indented Code Block should not parse the empty string"){
+    indentedCodeBlock shouldNotParse("")
+  }
   describe ("a simple Code Block parser") {
     indentedCodeBlock shouldParseWith  (
       "    a simple\n      indented code block\n",
@@ -186,6 +193,7 @@ class MarkdownParserTests extends FunSpec with Matchers with CustomMatchers {
       CodeBlock("foo  \n")
     )
   }
+
   describe ("The first line can be indented more than four spaces:") {
     indentedCodeBlock shouldParseWith  (
       "        foo\n    bar\n",
@@ -195,6 +203,10 @@ class MarkdownParserTests extends FunSpec with Matchers with CustomMatchers {
   // ###########################################################################
   // ##################### Fenced Code Block Tests #############################
   // ###########################################################################
+  // Complete tested!
+  describe ("Fenced Code Block should not parse the empty string"){
+    fencedCodeBlock shouldNotParse("")
+  }
   describe ("Here is a simple example with backticks:") {
     fencedCodeBlock shouldParseWith  (
       "```\n<\n >\n```\n",
@@ -288,6 +300,10 @@ class MarkdownParserTests extends FunSpec with Matchers with CustomMatchers {
   // ###########################################################################
   // ####################### Thematic Breaks Tests #############################
   // ###########################################################################
+  // complete tested!
+  describe ("Thematic Break should not parse the empty string"){
+    thematicBreak shouldNotParse("")
+  }
   describe ("A line consisting of 0-3 spaces of indentation, followed by a sequence of three or more matching -, _, or * characters, each followed optionally by any number of spaces, forms a thematic break:") {
     thematicBreak shouldParse  ("***\n")
     thematicBreak shouldParse  ("---\n")
@@ -312,6 +328,10 @@ class MarkdownParserTests extends FunSpec with Matchers with CustomMatchers {
       mdIndentedThematic shouldParseWith  (
         "    ***\n\u0000",
         List(CodeBlock("***\n"))
+      )
+      mdThemaicParagraph shouldParseWith  (
+        "test\n    ----\n\u0000",
+        List(Paragraph("test\n----\n"))
       )
     }
   }
@@ -339,6 +359,10 @@ class MarkdownParserTests extends FunSpec with Matchers with CustomMatchers {
   // ###########################################################################
   // ######################## Setext Heading Tests #############################
   // ###########################################################################
+
+  describe ("should not parse the empty string"){
+    setextHeading shouldNotParse("")
+  }
   describe ("Simple examples:") {
     setextHeading shouldParseWith  (
       "Foo *bar*\n=========\n",
@@ -396,6 +420,7 @@ class MarkdownParserTests extends FunSpec with Matchers with CustomMatchers {
       H2("Foo\n")
     )
   }
+
   describe ("Four spaces is too much:") {
     mdSetextParagraph shouldParseWith (
       "f\n    ----\n\u0000",
