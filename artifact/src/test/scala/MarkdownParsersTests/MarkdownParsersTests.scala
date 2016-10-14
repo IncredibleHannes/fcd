@@ -435,7 +435,23 @@ class MarkdownParserTests extends FunSpec with Matchers with CustomMatchers {
       "Foo\n--- -\n"
     )
   }
-
+  describe ("Setext headings cannot be empty:") {
+    setextHeading shouldNotParse (
+      " \n====\n"
+    )
+  }
+  describe ("But in general a blank line is not required before or after setext headings:") {
+    mdSetextParagraph shouldParseWith (
+      "Bar\n---\nBaz\n\u0000",
+      List(Heading(2, "Bar\n"), Paragraph("Baz\n"))
+    )
+  }
+  describe ("Setext heading text lines must not be interpretable as block constructs other than paragraphs. So, the line of dashes in these examples gets interpreted as a thematic break:") {
+    mdThematicSetext shouldParseWith (
+      "---\n---\n\u0000",
+      List(ThematicBreak(), ThematicBreak())
+    )
+  }
   // ###########################################################################
   // ########################## Paragraphs Tests ###############################
   // ###########################################################################
@@ -474,6 +490,33 @@ class MarkdownParserTests extends FunSpec with Matchers with CustomMatchers {
     )
     paragraph shouldNotParse (
       "    aaa\nbbb\n"
+    )
+  }
+  // ###########################################################################
+  // ########################## Block Quote Tests ##############################
+  // ###########################################################################
+  describe ("Here is a simple example:") {
+    mdBlockParagraph shouldParseWith(
+      "> p\n\u0000",
+      List(BlockQuote(List(Paragraph("p\n"))))
+    )
+  }
+  describe ("The spaces after the > characters can be omitted:") {
+    mdBlockParagraph shouldParseWith(
+      ">p\n\u0000",
+      List(BlockQuote(List(Paragraph("p\n"))))
+    )
+  }
+  describe ("The > characters can be indented 1-3 spaces:") {
+    mdBlockParagraph shouldParseWith(
+      "   > p\n\u0000",
+      List(BlockQuote(List(Paragraph("p\n"))))
+    )
+  }
+  describe ("Four spaces gives us a code block:") {
+    mdIndentedBlock shouldParseWith(
+      "    > p\n\u0000",
+      List(CodeBlock("> p\n"))
     )
   }
 }

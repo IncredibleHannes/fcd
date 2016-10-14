@@ -44,7 +44,7 @@ trait MarkdownParsers { self: RichParsers with MarkdownHelperfunctions =>
       )
 
     lazy val atxHeadingContent: Parser[String] =
-      ( not(some(space) ~ always)
+      (  not(some(space) ~ always)
       &> (many(no('#') & no('\n')) &> inlineParser)
       <& not(always ~ some(space))
       )
@@ -162,8 +162,8 @@ trait MarkdownParsers { self: RichParsers with MarkdownHelperfunctions =>
   lazy val blockQuote: Parser[Block]= {
     def blockQuoteCombinator[T](p: Parser[T]): Parser[T] =
       ( done(p << eosChar)
-      | ('>' ~ space ~> readLine(p))
-      <|('>' ~> readLine(p))
+      | (indet ~ '>' ~ space ~> readLine(p))
+      <|(indet ~ '>' ~> readLine(p))
       )
 
     def readLine[T](p: Parser[T]): Parser[T] =
@@ -235,7 +235,7 @@ trait MarkdownParsers { self: RichParsers with MarkdownHelperfunctions =>
     }
 
   lazy val mdAtxParagraph: NT[List[Block]] =
-    altBiasedAlt(altReadLine(atxHeading, mdAtxParagraph),
+    biasedAlt(altReadLine(atxHeading, mdAtxParagraph),
                  altReadLine(paragraph, mdAtxParagraph)) |
                  eos ^^^ (List())
 
@@ -277,6 +277,11 @@ trait MarkdownParsers { self: RichParsers with MarkdownHelperfunctions =>
   lazy val mdIndentedSetext: NT[List[Block]] =
     altBiasedAlt(altReadLine(indentedCodeBlock, mdIndentedSetext),
                  altReadLine(setextHeading, mdIndentedSetext)) |
+                 eos ^^^ (List())
+
+  lazy val mdIndentedBlock: NT[List[Block]] =
+    altBiasedAlt(altReadLine(indentedCodeBlock, mdIndentedBlock),
+                 altReadLine(blockQuote, mdIndentedBlock)) |
                  eos ^^^ (List())
 
   lazy val mdThematicSetext: NT[List[Block]] =
